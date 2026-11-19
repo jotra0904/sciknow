@@ -91,6 +91,7 @@ h1,h2{margin:0}
 .foot{display:flex;justify-content:space-between;margin-top:14px}
 .hearts{font-size:1.2rem;letter-spacing:2px}
 .x{background:none;border:0;font-size:1.6rem;color:var(--mute);cursor:pointer;padding:0 6px}
+.gram{color:var(--mute);font-size:.95rem;min-height:1.2em;margin-top:-8px}.opt small{display:block;color:var(--mute);font-weight:400;font-size:.85rem}.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.vgrid .tab{font-size:1.05rem}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -120,6 +121,8 @@ h1,h2{margin:0}
     <div class="small">Fortschritt zum nächsten Level</div>
     <div class="bar" style="margin-top:8px"><i id="m-bar"></i></div>
     <div class="small" id="m-sub"></div>
+    <div class="small" id="m-lsub" style="margin-top:12px"></div>
+    <div class="bar" style="margin-top:6px"><i id="m-lbar"></i></div>
   </div>
   <div class="tabs" id="tabs"></div>
   <div id="modes"></div>
@@ -139,10 +142,17 @@ h1,h2{margin:0}
     <div class="seg" id="q-seg"><button id="b-sel">Auswahl</button><button id="b-typ">Eingabe</button></div>
     <div class="prompt" id="q-prompt"></div>
     <p class="word" id="q-word"></p>
+    <div class="gram" id="q-gram"></div>
     <div class="opts" id="q-opts"></div>
-    <div class="typed" id="q-typed"><input id="q-in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Verbform eingeben"><button class="btn" id="b-check">Prüfen</button></div>
+    <div class="typed" id="q-typed"><input id="q-in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Antwort eingeben"><button class="btn" id="b-check">Prüfen</button></div>
   </div>
   <div class="fb" id="q-fb"><b id="q-msg"></b><button class="btn" id="b-next">Weiter</button></div>
+</section>
+
+<section class="screen" id="s-verbs">
+  <div class="top"><button class="x" id="b-vback" aria-label="Zurück">✕</button><h2 class="logo" style="font-size:1.3rem">Verb wählen</h2><span></span></div>
+  <p class="sub" style="max-width:none;margin:0 0 14px">Jede Runde übt genau ein Verb: sechs Personalformen und den Imperativ.</p>
+  <div id="verbs" class="vgrid"></div>
 </section>
 
 <section class="screen" id="s-end">
@@ -159,11 +169,115 @@ h1,h2{margin:0}
 
 <script>
 /* ===== INHALTE (hier erweitern) =====
-   Neue Lektion = neues Objekt in LESSONS. Lektion 2 ist angelegt und leer:
+   Neue Lektion = neues Objekt in LESSONS. Lektion 4 ist gesperrt angelegt (soon:true):
    einfach Einträge in "words" ergänzen, dann erscheint sie automatisch spielbar.
    Eintrag: { la:"…", de:"Übersetzung", conj:"1sg,2sg,3sg,1pl,2pl,3pl|Imp.Sg,Imp.Pl" }
    - "de" leer lassen = Wort wird in Übersetzungsübungen übersprungen.
    - "conj" nur bei Verben; leere Formen werden nicht abgefragt. */
+/* Lektionen 2 und 3 als Textzeilen: "Latein ; Deutsch ; Grammatik"
+   Grammatik: m/f/n = Genus | Akk. = Präposition mit Akkusativ | a:/e:/i:Stamm = Verb (a-, e-, i-Konjugation, Formen werden erzeugt)
+   c:Formen = Verb mit eigenen Formen (6 Präsensformen|Imperativ Sg.,Pl.) | v:… = nur 1. Pers. Sg. | +Zusatz = z. B. "+m. Dat." */
+const CG = { a: ["o","as","at","amus","atis","ant","a","ate"], e: ["eo","es","et","emus","etis","ent","e","ete"], i: ["io","is","it","imus","itis","iunt","i","ite"] };
+function parse(t) {
+  return t.trim().split("\n").map(l => {
+    const [la, de, x = ""] = l.split(" ; "), w = { la: la.trim(), de: de.trim() };
+    const [main, extra] = x.trim().split("+");
+    if (/^[mfn]$/.test(main)) w.g = main;
+    else if (main === "Akk.") w.prep = "Akk.";
+    else if (/^[aei]:/.test(main)) { const f = CG[main[0]], s = main.slice(2); w.conj = f.slice(0, 6).map(e => s + e).join(",") + "|" + f.slice(6).map(e => s + e).join(","); }
+    else if (main.startsWith("c:")) w.conj = main.slice(2);
+    else if (main.startsWith("v:")) w.v = main.slice(2);
+    if (extra) w.extra = extra.trim();
+    return w;
+  });
+}
+const L2 = `
+diu ; lange, lange Zeit
+exspectare ; warten (auf), erwarten ; a:exspect
+per ; durch ; Akk.
+via ; der Weg, die Straße ; f
+properare ; eilen, sich beeilen ; a:proper
+semper ; immer
+post ; hinter, nach ; Akk.
+subito ; plötzlich
+non iam ; nicht mehr
+nam ; denn, nämlich
+undique ; von allen Seiten, von überallher
+turba ; die Menge, die Menschenmenge ; f
+reperire ; finden, wiederfinden ; i:reper
+ante ; vor ; Akk.
+taberna ; das Gasthaus, der Laden ; f
+intrare ; betreten, hineingehen ; a:intr
+porta ; das Tor, die Tür ; f
+aperire ; öffnen, aufdecken ; i:aper
+mox ; bald
+servare ; retten, bewahren, beobachten ; a:serv
+fenestra ; das Fenster ; f
+ad ; zu, bei, nach, an ; Akk.
+sedere ; sitzen ; e:sed
+audire ; hören ; i:aud
+tu ; du
+tenere ; halten, festhalten, besitzen ; e:ten
+nunc ; jetzt, nun
+pecunia ; das Geld, das Vermögen ; f
+postulare ; fordern, verlangen ; a:postul
+violare ; verletzen, beleidigen ; a:viol
+satis ; genug
+valere ; gesund sein, stark sein, Einfluss haben ; e:val
+rogare ; fragen, bitten ; a:rog
+quid? ; was?
+desiderare ; vermissen, verlangen, sich sehnen nach ; a:desider
+necare ; töten ; a:nec
+ego ; ich
+amicus ; der Freund ; m
+ita ; so
+ubi? ; wo?
+primo ; zuerst
+dare ; geben ; c:do,das,dat,damus,datis,dant|da,date
+scire ; wissen, kennen, verstehen ; i:sc`;
+const L3 = `
+salve! salvete! ; Sei gegrüßt! Seid gegrüßt!
+narrare ; erzählen ; a:narr
+puella ; das Mädchen ; f
+statim ; sofort
+parare ; (vor)bereiten, vorhaben, erwerben ; a:par
+iniuria ; das Unrecht, die Beleidigung ; f
+sustinere ; ertragen, standhalten ; e:sustin
+quemadmodum ; wie, auf welche Weise
+prohibere ; abhalten, hindern, verhindern ; e:prohib
+paulum ; ein wenig
+respondere ; antworten ; e:respond
+certe ; gewiss, sicherlich
+indicare ; anzeigen, melden ; a:indic
+negare ; leugnen, verneinen, verweigern ; a:neg
+culpa ; die Schuld ; f
+probare ; prüfen, beweisen, für gut befinden ; a:prob
+bene ; gut
+una ; zusammen, zugleich
+Circus Maximus ; der Circus Maximus (Rennbahn für Wagenrennen in Rom) ; m
+providere ; sorgen für ; e:provid+m. Dat.
+socius ; der Gefährte, der Verbündete ; m
+vocare ; rufen, nennen ; a:voc
+iterum ; wieder(um), zum zweiten Mal
+superare ; besiegen, überwinden, übertreffen ; a:super
+dum ; während, solange, bis
+temptare ; versuchen, prüfen, angreifen ; a:tempt
+cavere ; vorsichtig sein, sich hüten (vor) ; e:cav+m. Akk.
+non debere ; nicht dürfen, nicht müssen ; v:non debeo
+sententia ; die Meinung, der Satz, der Sinn ; f
+placere ; gefallen ; c:placeo,places,placet,placemus,placetis,placent
+parere ; gehorchen ; e:par
+paulo ; (um) ein wenig
+paulo post ; wenig später, kurz darauf
+gladius ; das Schwert ; m
+animus ; der Geist, der Mut, die Gesinnung ; m
+desse ; fehlen, abwesend sein, nicht da sein ; c:desum,des,deest,desumus,deestis,desunt
+mandare ; übergeben, einen Auftrag geben ; a:mand
+poena ; die Strafe ; f
+instare ; bevorstehen, bedrängen, drohen ; a:inst+m. Dat.
+et … et ; sowohl … als auch
+gratia ; der Dank ; f
+gratiam debere ; Dank schulden ; v:gratiam debeo`;
 const LESSONS = [{
   id: "l1", title: "Lektion 1",
   words: [
@@ -209,45 +323,78 @@ const LESSONS = [{
     { la: "medicus", de: "der Arzt" },
     { la: "solum", de: "nur" }
   ]
-}, { id: "l2", title: "Lektion 2", words: [] }];
+}, { id: "l2", title: "Lektion 2", words: parse(L2) },
+   { id: "l3", title: "Lektion 3", words: parse(L3) },
+   { id: "l4", title: "Lektion 4", words: [], soon: true }];
 
 /* Konjugations-Felder: Schlüssel p = Präsens, i = Imperativ */
 const SLOTS = [["p",0,"1. Person Singular"],["p",1,"2. Person Singular"],["p",2,"3. Person Singular"],
   ["p",3,"1. Person Plural"],["p",4,"2. Person Plural"],["p",5,"3. Person Plural"],
   ["i",0,"Imperativ Singular"],["i",1,"Imperativ Plural"]];
+const ROUND_SIZE = 10, MAX_HEARTS = 3, XP_OK = 10, XP_PER_LEVEL = 100, KEY = "latina-v1";
+LESSONS.forEach(L => L.words.forEach(w => w.lid = L.id));
 
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const forms = w => { if (!w.conj) return null; const [p = "", i = ""] = w.conj.split("|"); return { p: p.split(",").map(s => s.trim()), i: i.split(",").map(s => s.trim()) }; };
+const norm = s => s.toLowerCase().replace(/[?!…]/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
 
-/* Fragen-Bauer: liefern Fragen {prompt, word, answer, pool, kind} */
+/* Bedeutungen: jede einzelne Buchbedeutung (auch ohne Artikel/Klammern) und der volle Eintrag zählen als richtig */
+const parts = w => { const s = new Set(); w.de.split(/,\s*|(?<=!)\s+/).concat(w.de).forEach(m => { const c = m.replace(/\s*\([^)]*\)/g, ""); [m, c, c.replace(/^\s*(der|die|das)\s+/i, ""), m.replace(/[()]/g, "")].forEach(v => v && s.add(v)); }); return [...s]; };
+const keyset = w => new Set(parts(w).map(norm));
+const overlap = (a, b) => [...a].some(x => b.has(x));
+const lat = x => [x.la, ...x.la.split(/(?<=!)\s+/)];
+
+/* Grammatische Angaben (Substantiv, Verb, Präposition); sonst leer */
+const GEN = { m: "maskulin (m)", f: "feminin (f)", n: "neutrum (n)" };
+function gram(w) {
+  if (w.g) return "Substantiv, " + GEN[w.g];
+  if (w.prep) return "Präposition mit Akkusativ";
+  const f = forms(w), v = w.v || (f && f.p[0]);
+  return v ? "1. Person Singular: " + v + (w.extra ? " (" + w.extra + ")" : "") : "";
+}
+
+/* Fragen-Bauer */
 function trQs(ws, dirs) {
   const t = ws.filter(w => w.de);
   if (t.length < 4) return [];
-  return shuffle(t).slice(0, ROUND_SIZE).map(w => dirs[Math.floor(Math.random() * dirs.length)] === "la"
-    ? { prompt: "Was bedeutet …?", word: w.la, answer: w.de, pool: t.map(x => x.de) }
-    : { prompt: "Wie heißt auf Latein …?", word: w.de, answer: w.la, pool: t.map(x => x.la) });
+  return shuffle(t).slice(0, ROUND_SIZE).map(w => {
+    const k = keyset(w), g = gram(w), d = dirs[Math.floor(Math.random() * dirs.length)];
+    const base = { k, kind: "tr", key: w.lid + "|" + w.la };
+    if (d === "la") return { ...base, prompt: "Was bedeutet …?", word: w.la, sub: g, answer: w.de, accept: parts(w), pool: t.map(x => ({ t: x.de, k: keyset(x) })) };
+    return { ...base, prompt: "Wie heißt auf Latein …?", word: w.de, sub: "", answer: w.la, asub: g,
+      accept: t.filter(x => overlap(k, keyset(x))).flatMap(lat), pool: t.map(x => ({ t: x.la, s: gram(x), k: keyset(x) })) };
+  });
 }
-function conjQs(ws) {
-  const all = [], fs = ws.map(forms).filter(Boolean);
-  ws.forEach(w => { const f = forms(w); if (f) SLOTS.forEach(([k, n, label]) => { if (f[k][n]) all.push({ w, f, k, n, label }); }); });
-  return shuffle(all).slice(0, ROUND_SIZE).map(s => ({
-    kind: "conj", prompt: s.label + (s.k === "p" ? " Präsens" : "") + " von …", word: s.w.la, answer: s.f[s.k][s.n],
-    pool: s.f.p.concat(s.f.i, fs.map(f => f[s.k][s.n]))
-  }));
+/* Konjugieren: genau ein Verb pro Runde, Antworten nur aus den Formen dieses Verbs */
+function conjQs(w) {
+  const f = forms(w), own = f.p.concat(f.i).filter(Boolean), qs = [];
+  SLOTS.forEach(([k, n, label]) => { if (f[k][n]) qs.push({ kind: "conj", prompt: label + (k === "p" ? " Präsens" : "") + " von …", word: w.la, sub: "", answer: f[k][n], accept: [f[k][n]], pool: own.map(t => ({ t })) }); });
+  return shuffle(qs);
 }
+function withOptions(q) {
+  const seen = new Set([q.answer]), wrong = [];
+  for (const x of shuffle(q.pool)) {
+    if (seen.has(x.t) || (q.k && x.k && overlap(q.k, x.k))) continue;
+    seen.add(x.t); wrong.push(x); if (wrong.length === 3) break;
+  }
+  q.options = shuffle([{ t: q.answer, s: q.asub }, ...wrong]);
+  return q;
+}
+const allWords = () => LESSONS.flatMap(L => L.words);
 const MODES = [
   { id: "la-de", icon: "🏺", name: "Latein → Deutsch", desc: "Was bedeutet das Wort?", build: ws => trQs(ws, ["la"]) },
   { id: "de-la", icon: "📜", name: "Deutsch → Latein", desc: "Wie heißt das auf Latein?", build: ws => trQs(ws, ["de"]) },
-  { id: "conj", icon: "✒️", name: "Konjugieren", desc: "Verbformen bilden (Singular, Plural, Imperativ)", build: conjQs },
-  { id: "mix", icon: "🎲", name: "Gemischt", desc: "Latein ↔ Deutsch im Wechsel", build: ws => trQs(ws, ["la", "de"]) }
+  { id: "conj", icon: "✒️", name: "Konjugieren", desc: "Ein Verb wählen: 6 Personalformen und Imperativ" },
+  { id: "mix", icon: "🎲", name: "Gemischt", desc: "Alle freigeschalteten Lektionen im Wechsel", build: () => trQs(allWords(), ["la", "de"]) }
 ];
-
-const ROUND_SIZE = 10, MAX_HEARTS = 3, XP_OK = 10, XP_PER_LEVEL = 100, KEY = "latina-v1";
+/* Bestwert-Schlüssel: Lektion 1 behält die alten Schlüssel */
+const bk = (m, i = save.lesson) => m.id === "mix" ? "mix" : m.id === "conj" ? "conjv:" + LESSONS[i].id : (i === 0 ? m.id : LESSONS[i].id + ":" + m.id);
 
 /* ===== SPEICHER (alter Fortschritt bleibt erhalten) ===== */
-let save = { xp: 0, rounds: 0, best: {}, theme: "", lesson: 0, input: false };
+let save = { xp: 0, rounds: 0, best: {}, theme: "", lesson: 0, input: false, known: {} };
 try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) save = Object.assign(save, s); } catch (e) {}
 if (!save.best) save.best = {};
+if (!save.known) save.known = {};
 delete save.best.pos; /* alter Wortart-Modus entfernt */
 if (!LESSONS[save.lesson]) save.lesson = 0;
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
@@ -256,62 +403,71 @@ const $ = id => document.getElementById(id);
 function show(id) { document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id)); window.scrollTo(0, 0); }
 const level = () => Math.floor(save.xp / XP_PER_LEVEL) + 1;
 function applyTheme() { if (save.theme) document.documentElement.dataset.theme = save.theme; else delete document.documentElement.dataset.theme; }
-const norm = s => s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const known = L => L.words.filter(w => save.known[w.lid + "|" + w.la]).length;
 
 /* ===== MENÜ ===== */
 function renderMenu() {
-  const L = LESSONS[save.lesson];
+  const L = LESSONS[save.lesson], n = L.words.length, kn = known(L);
   $("m-xp").textContent = "⭐ " + save.xp + " XP";
   $("m-lvl").textContent = "Level " + level();
-  $("m-title").textContent = L.title + (L.words.length ? " · " + L.words.length + " Vokabeln" : " · noch leer");
+  $("m-title").textContent = L.title + (n ? " · " + n + " Vokabeln" : L.soon ? " · Kommt bald raus" : " · noch leer");
   const into = save.xp % XP_PER_LEVEL;
   $("m-bar").style.width = into + "%";
   $("m-sub").textContent = into + " / " + XP_PER_LEVEL + " XP bis Level " + (level() + 1);
+  $("m-lsub").textContent = n ? L.title + ": " + kn + " / " + n + " Vokabeln gelernt" : "";
+  $("m-lbar").style.width = n ? (kn / n * 100) + "%" : "0";
   $("tabs").innerHTML = "";
   LESSONS.forEach((l, i) => {
     const b = document.createElement("button");
     b.className = "tab" + (i === save.lesson ? " on" : "");
-    b.innerHTML = l.title + "<small>" + (l.words.length ? l.words.length + " Vokabeln" : "🔒 bald verfügbar") + "</small>";
+    b.innerHTML = l.title + "<small>" + (l.words.length ? known(l) + " / " + l.words.length + " gelernt" : "🔒 Kommt bald raus") + "</small>";
     b.onclick = () => { save.lesson = i; persist(); renderMenu(); };
     $("tabs").appendChild(b);
   });
   const box = $("modes"); box.innerHTML = "";
-  if (!L.words.length) {
-    box.innerHTML = '<div class="card empty"><div class="big">🔒</div><b>' + L.title + ' ist noch nicht verfügbar.</b><br>Neue Vokabeln und Übungen folgen bald.</div>';
+  if (!n) {
+    box.innerHTML = '<div class="card empty"><div class="big">🔒</div><b>' + L.title + '</b><br>' + (L.soon ? "Kommt bald raus" : "Noch nicht verfügbar.") + '</div>';
   } else MODES.forEach(m => {
-    const b = document.createElement("button"), best = save.best[m.id];
+    const b = document.createElement("button"), best = save.best[bk(m)], full = m.id === "conj" ? 100 : ROUND_SIZE;
     b.className = "mode";
     b.innerHTML = '<div class="ic">' + m.icon + '</div><div><b>' + m.name + '</b><span>' + m.desc +
-      (best != null ? " · Bestwert " + best + "/" + ROUND_SIZE : "") + '</span></div>' + (best === ROUND_SIZE ? '<div class="star">★</div>' : "");
+      (best != null ? " · Bestwert " + best + (m.id === "conj" ? "%" : "/" + ROUND_SIZE) : "") + '</span></div>' + (best === full ? '<div class="star">★</div>' : "");
     b.onclick = () => startRound(m.id);
     box.appendChild(b);
   });
   show("s-menu");
 }
+function openVerbs() {
+  const box = $("verbs"); box.innerHTML = "";
+  LESSONS[save.lesson].words.filter(w => forms(w)).forEach(w => {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.innerHTML = w.la + "<small>" + forms(w).p[0] + "</small>";
+    b.onclick = () => startRound("conj", w);
+    box.appendChild(b);
+  });
+  show("s-verbs");
+}
 
 /* ===== QUIZ ===== */
 let R = null;
-function withOptions(q) {
-  const wrong = shuffle([...new Set(q.pool.filter(Boolean))].filter(x => x !== q.answer)).slice(0, 3);
-  q.options = shuffle([q.answer, ...wrong]);
-  return q;
-}
-function startRound(modeId) {
+function startRound(modeId, verb) {
   const mode = MODES.find(m => m.id === modeId);
-  const qs = mode.build(LESSONS[save.lesson].words).map(withOptions);
+  if (modeId === "conj" && !verb) return openVerbs();
+  const qs = (verb ? conjQs(verb) : mode.build(LESSONS[save.lesson].words)).map(withOptions);
   if (qs.length < 4) { alert("Für diese Übung sind noch nicht genug Einträge hinterlegt."); return; }
-  R = { mode, qs, i: 0, hearts: MAX_HEARTS, ok: 0, xp: 0, locked: false };
+  R = { mode, verb, bk: bk(mode), qs, i: 0, hearts: MAX_HEARTS, ok: 0, xp: 0, locked: false };
   show("s-quiz"); renderQ();
 }
 function renderHearts() { $("q-hearts").textContent = "❤️".repeat(R.hearts) + "🖤".repeat(MAX_HEARTS - R.hearts); }
 function renderQ() {
-  const q = R.qs[R.i], typed = q.kind === "conj" && save.input;
+  const q = R.qs[R.i], typed = save.input;
   R.locked = false;
   $("q-prompt").textContent = q.prompt;
   $("q-word").textContent = q.word;
+  $("q-gram").textContent = q.sub || "";
   $("q-bar").style.width = (R.i / R.qs.length * 100) + "%";
   $("q-fb").className = "fb";
-  $("q-seg").style.display = q.kind === "conj" ? "flex" : "none";
   $("b-sel").className = typed ? "" : "on"; $("b-typ").className = typed ? "on" : "";
   $("q-opts").style.display = typed ? "none" : "grid";
   $("q-typed").style.display = typed ? "flex" : "none";
@@ -320,8 +476,9 @@ function renderQ() {
   const box = $("q-opts"); box.innerHTML = "";
   q.options.forEach(o => {
     const b = document.createElement("button");
-    b.className = "opt"; b.textContent = o;
-    b.onclick = () => answer(b, o);
+    b.className = "opt"; b.dataset.t = o.t; b.textContent = o.t;
+    if (o.s) { const s = document.createElement("small"); s.textContent = o.s; b.appendChild(s); }
+    b.onclick = () => answer(b, o.t);
     box.appendChild(b);
   });
   if (typed) inp.focus();
@@ -330,11 +487,13 @@ function answer(btn, val) {
   if (R.locked) return;
   if (!btn && !val.trim()) return;
   R.locked = true;
-  const q = R.qs[R.i], right = norm(val) === norm(q.answer), fb = $("q-fb");
-  document.querySelectorAll(".opt").forEach(b => { b.disabled = true; if (b.textContent === q.answer) b.classList.add("ok"); });
+  const q = R.qs[R.i], fb = $("q-fb");
+  const right = btn ? val === q.answer : q.accept.map(norm).includes(norm(val));
+  document.querySelectorAll(".opt").forEach(b => { b.disabled = true; if (b.dataset.t === q.answer) b.classList.add("ok"); });
   if (!btn) { $("q-in").disabled = true; $("b-check").disabled = true; $("q-in").className = right ? "ok" : "bad"; }
   if (right) {
     R.ok++; R.xp += XP_OK; save.xp += XP_OK;
+    if (q.key) save.known[q.key] = 1;
     fb.className = "fb show ok"; $("q-msg").textContent = "Recte! Richtig 🎉";
     pop("+" + XP_OK + " XP");
   } else {
@@ -353,8 +512,10 @@ function next() {
 }
 function finish(won) {
   $("q-bar").style.width = "100%";
-  const id = R.mode.id;
-  if (won) { save.rounds++; if ((save.best[id] || 0) < R.ok) save.best[id] = R.ok; persist(); }
+  if (won) {
+    const v = R.mode.id === "conj" ? Math.round(R.ok * 100 / R.qs.length) : R.ok;
+    save.rounds++; if ((save.best[R.bk] || 0) < v) save.best[R.bk] = v; persist();
+  }
   $("e-icon").textContent = won ? (R.ok === R.qs.length ? "🏆" : "🎉") : "💔";
   $("e-title").textContent = won ? (R.ok === R.qs.length ? "Perfekt!" : "Runde geschafft!") : "Keine Herzen mehr";
   $("e-text").textContent = won ? "Weiter so, du machst Fortschritte!" : "Nicht schlimm – versuch es gleich noch einmal.";
@@ -372,14 +533,15 @@ $("q-in").onkeydown = e => { if (e.key === "Enter") { R.locked ? next() : answer
 $("b-sel").onclick = () => setInput(false);
 $("b-typ").onclick = () => setInput(true);
 $("b-quit").onclick = () => { if (confirm("Runde wirklich beenden?")) renderMenu(); };
-$("b-again").onclick = () => startRound(R.mode.id);
+$("b-vback").onclick = renderMenu;
+$("b-again").onclick = () => startRound(R.mode.id, R.verb);
 $("b-menu").onclick = renderMenu;
 $("b-theme").onclick = () => {
   const d = document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
   save.theme = d ? "light" : "dark"; applyTheme(); persist();
 };
 $("b-reset").onclick = () => {
-  if (confirm("Gesamten Lernfortschritt wirklich löschen?")) { save = { xp: 0, rounds: 0, best: {}, theme: save.theme, lesson: 0, input: false }; persist(); renderMenu(); }
+  if (confirm("Gesamten Lernfortschritt wirklich löschen?")) { save = { xp: 0, rounds: 0, best: {}, theme: save.theme, lesson: 0, input: false, known: {} }; persist(); renderMenu(); }
 };
 
 applyTheme();
