@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LATINA – Latein lernen</title>
+<title>DISCERE – Latein lernen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&display=swap">
@@ -29,7 +29,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 @keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 h1,h2{margin:0}
 .logo{font-family:Cinzel,Georgia,serif;font-weight:900;letter-spacing:.14em;color:var(--pri);text-shadow:1px 2px 0 var(--gold)}
-.hero .logo{font-size:clamp(2.8rem,15vw,4.6rem)}
+.hero .logo{font-size:clamp(2.4rem,12.5vw,4.2rem)}
 .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px}
 .ped{width:min(300px,80%);height:46px;background:linear-gradient(var(--pri),var(--priD));clip-path:polygon(0 100%,50% 0,100% 100%);border-bottom:6px solid var(--gold)}
 .mascot{font-size:4.6rem;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 6px 4px rgba(0,0,0,.25))}
@@ -91,7 +91,7 @@ h1,h2{margin:0}
 .foot{display:flex;justify-content:space-between;margin-top:14px}
 .hearts{font-size:1.2rem;letter-spacing:2px}
 .x{background:none;border:0;font-size:1.6rem;color:var(--mute);cursor:pointer;padding:0 6px}
-.gram{color:var(--mute);font-size:.95rem;min-height:1.2em;margin-top:-8px}.opt small{display:block;color:var(--mute);font-weight:400;font-size:.85rem}.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.vgrid .tab{font-size:1.05rem}
+.gram{color:var(--mute);font-size:.95rem;min-height:1.2em;margin-top:-8px}.opt small{display:block;color:var(--mute);font-weight:400;font-size:.85rem}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -104,7 +104,7 @@ h1,h2{margin:0}
   <div class="hero">
     <div class="ped"></div>
     <div class="mascot">🏛️</div>
-    <h1 class="logo">LATINA</h1>
+    <h1 class="logo">DISCERE</h1>
     <div class="orn">◆ DISCE LATINE ◆</div>
     <p class="sub">Lerne Latein wie in der Schule des alten Rom: sammle XP, bewahre deine Herzen und steige im Level auf!</p>
     <button class="btn" id="b-start">Intrare</button>
@@ -113,7 +113,7 @@ h1,h2{margin:0}
 
 <section class="screen" id="s-menu">
   <div class="top">
-    <h2 class="logo" style="font-size:1.7rem">LATINA</h2>
+    <h2 class="logo" style="font-size:1.7rem">DISCERE</h2>
     <div class="stats"><span class="chip" id="m-xp">⭐ 0 XP</span><span class="chip" id="m-lvl">Lv 1</span></div>
   </div>
   <div class="card">
@@ -147,12 +147,6 @@ h1,h2{margin:0}
     <div class="typed" id="q-typed"><input id="q-in" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Antwort eingeben"><button class="btn" id="b-check">Prüfen</button></div>
   </div>
   <div class="fb" id="q-fb"><b id="q-msg"></b><button class="btn" id="b-next">Weiter</button></div>
-</section>
-
-<section class="screen" id="s-verbs">
-  <div class="top"><button class="x" id="b-vback" aria-label="Zurück">✕</button><h2 class="logo" style="font-size:1.3rem">Verb wählen</h2><span></span></div>
-  <p class="sub" style="max-width:none;margin:0 0 14px">Jede Runde übt genau ein Verb: sechs Personalformen und den Imperativ.</p>
-  <div id="verbs" class="vgrid"></div>
 </section>
 
 <section class="screen" id="s-end">
@@ -384,7 +378,7 @@ const allWords = () => LESSONS.flatMap(L => L.words);
 const MODES = [
   { id: "la-de", icon: "🏺", name: "Latein → Deutsch", desc: "Was bedeutet das Wort?", build: ws => trQs(ws, ["la"]) },
   { id: "de-la", icon: "📜", name: "Deutsch → Latein", desc: "Wie heißt das auf Latein?", build: ws => trQs(ws, ["de"]) },
-  { id: "conj", icon: "✒️", name: "Konjugieren", desc: "Ein Verb wählen: 6 Personalformen und Imperativ" },
+  { id: "conj", icon: "✒️", name: "Konjugieren", desc: "Ein zufälliges Verb: 6 Personalformen und Imperativ" },
   { id: "mix", icon: "🎲", name: "Gemischt", desc: "Alle freigeschalteten Lektionen im Wechsel", build: () => trQs(allWords(), ["la", "de"]) }
 ];
 /* Bestwert-Schlüssel: Lektion 1 behält die alten Schlüssel */
@@ -437,23 +431,11 @@ function renderMenu() {
   });
   show("s-menu");
 }
-function openVerbs() {
-  const box = $("verbs"); box.innerHTML = "";
-  LESSONS[save.lesson].words.filter(w => forms(w)).forEach(w => {
-    const b = document.createElement("button");
-    b.className = "tab";
-    b.innerHTML = w.la + "<small>" + forms(w).p[0] + "</small>";
-    b.onclick = () => startRound("conj", w);
-    box.appendChild(b);
-  });
-  show("s-verbs");
-}
-
 /* ===== QUIZ ===== */
 let R = null;
 function startRound(modeId, verb) {
   const mode = MODES.find(m => m.id === modeId);
-  if (modeId === "conj" && !verb) return openVerbs();
+  if (modeId === "conj" && !verb) verb = shuffle(LESSONS[save.lesson].words.filter(w => forms(w)))[0];
   const qs = (verb ? conjQs(verb) : mode.build(LESSONS[save.lesson].words)).map(withOptions);
   if (qs.length < 4) { alert("Für diese Übung sind noch nicht genug Einträge hinterlegt."); return; }
   R = { mode, verb, bk: bk(mode), qs, i: 0, hearts: MAX_HEARTS, ok: 0, xp: 0, locked: false };
@@ -533,8 +515,7 @@ $("q-in").onkeydown = e => { if (e.key === "Enter") { R.locked ? next() : answer
 $("b-sel").onclick = () => setInput(false);
 $("b-typ").onclick = () => setInput(true);
 $("b-quit").onclick = () => { if (confirm("Runde wirklich beenden?")) renderMenu(); };
-$("b-vback").onclick = renderMenu;
-$("b-again").onclick = () => startRound(R.mode.id, R.verb);
+$("b-again").onclick = () => startRound(R.mode.id);
 $("b-menu").onclick = renderMenu;
 $("b-theme").onclick = () => {
   const d = document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
